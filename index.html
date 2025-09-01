@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime.js Showcase</title>
+
+    <style>
+        /* ==========================================================================
+           1. GENERAL STYLING & SETUP
+           - We'll use a clean, dark theme to make the animations pop.
+           - CSS variables are used for easy theme management (an expert-level practice).
+           ========================================================================== */
+        :root {
+            --bg-color: #1a1a2e;
+            --primary-color: #e0e0e0;
+            --accent-color-1: #16213e;
+            --accent-color-2: #0f3460;
+            --highlight-color: #e94560;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Helper class to center content */
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 4rem 0;
+        }
+
+        h1, h2, h3 {
+            color: white;
+            font-weight: 700;
+        }
+        
+        h1 {
+            font-size: clamp(3rem, 8vw, 6rem); /* Responsive font size */
+            line-height: 1.1;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            border-bottom: 2px solid var(--accent-color-2);
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        p {
+            line-height: 1.6;
+            max-width: 65ch; /* Improves readability */
+        }
+
+        /* Styling for our animation demo areas */
+        .demo-area {
+            background-color: var(--accent-color-1);
+            padding: 2rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+        }
+
+        /* The little squares we'll be animating */
+        .el {
+            width: 50px;
+            height: 50px;
+            background-color: var(--highlight-color);
+            margin: 5px;
+        }
+
+        /* ==========================================================================
+           2. SPECIFIC DEMO STYLES
+           ========================================================================== */
+        
+        /* Hero section for the big intro */
+        .hero {
+            height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        /* For the text animation, we need to be able to move individual letters */
+        .hero h1 .letter {
+            display: inline-block;
+        }
+
+        /* Container for basic demos */
+        .basic-demo {
+            display: flex;
+        }
+
+        /* Staggering grid styles */
+        .stagger-grid {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            gap: 5px;
+        }
+        .stagger-grid .el {
+            width: 100%;
+            height: 25px;
+            margin: 0;
+            background-color: var(--primary-color);
+        }
+
+        /* Timeline demo styles */
+        .timeline-demo {
+            position: relative;
+            height: 100px;
+        }
+        .timeline-demo .el {
+            position: absolute;
+        }
+        
+        /* SVG demo styles */
+        #svg-demo-path {
+            stroke: var(--highlight-color);
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        /* Playback controls styles */
+        .control-btn {
+            background-color: var(--highlight-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!--
+        The page is structured into semantic sections, each demonstrating
+        a core feature of Anime.js.
+    -->
+
+    <section class="hero">
+        <div class="container">
+            <!-- This h1 will be animated by JavaScript -->
+            <h1 class="anime-headline">ANIME.JS</h1>
+        </div>
+    </section>
+
+    <div class="container">
+        <section id="basics">
+            <h2>Basic Properties</h2>
+            <p>Animate CSS properties like transforms (translate, rotate, scale), colors, and opacity on any DOM element.</p>
+            <div class="demo-area basic-demo">
+                <div class="el"></div>
+                <div class="el"></div>
+                <div class="el"></div>
+            </div>
+        </section>
+
+        <section id="staggering">
+            <h2>Staggering</h2>
+            <p>A powerful feature for creating complex animations on multiple elements with a delay between each one.</p>
+            <div class="demo-area">
+                <div class="stagger-grid">
+                    <!-- This grid will be filled by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <section id="timeline">
+            <h2>Timelines</h2>
+            <p>Create complex, sequential animations by chaining them together in a timeline. Each animation starts after the previous one finishes.</p>
+            <div class="demo-area timeline-demo">
+                <div class="el"></div>
+            </div>
+        </section>
+        
+        <section id="svg">
+            <h2>SVG Motion Graphics</h2>
+            <p>Animate SVG attributes to create effects like line drawing. Here, we animate the 'strokeDashoffset' property.</p>
+            <div class="demo-area">
+                <svg width="100%" height="100" viewBox="0 0 300 100">
+                    <path id="svg-demo-path" d="M10 80 Q 77.5 10, 145 80 T 280 80" />
+                </svg>
+            </div>
+        </section>
+
+        <section id="controls">
+            <h2>Playback Controls</h2>
+            <p>Anime.js gives you full programmatic control over your animations. Assign an animation to a variable to play, pause, and restart it.</p>
+            <div class="demo-area">
+                <div class="playback-demo">
+                    <div class="el"></div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button class="control-btn play">Play</button>
+                    <button class="control-btn pause">Pause</button>
+                    <button class="control-btn restart">Restart</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!--
+        We include the Anime.js library from a CDN. This is the simplest way to
+        get started without any local installation.
+    -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+    <script>
+        // A crucial best practice: wrap all your JavaScript in a 'DOMContentLoaded' listener.
+        // This ensures the script only runs after the entire HTML page is loaded, preventing
+        // errors where your script tries to find an element that doesn't exist yet.
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ==========================================================================
+            // 1. HERO TEXT ANIMATION
+            // A flashy intro that uses staggering on individual letters.
+            // ==========================================================================
+            
+            // First, we need to wrap each letter of our headline in its own <span> tag.
+            // This is a common technique to allow individual letter animation.
+            const headline = document.querySelector('.anime-headline');
+            headline.innerHTML = headline.textContent.replace(/\S/g, "<span class='letter'>$&</span>");
+
+            // Now we can target each '.letter' and apply a staggered animation.
+            anime({
+                targets: '.hero .letter',
+                translateY: [100, 0],   // Move from 100px below to its original position
+                opacity: [0, 1],       // Fade in
+                easing: 'easeOutExpo', // A smooth, fast-to-slow easing
+                duration: 1400,
+                // The 'stagger' function is a key feature. It creates a delay
+                // for each element in the target array.
+                delay: anime.stagger(100) // 100ms delay between each letter
+            });
+
+
+            // ==========================================================================
+            // 2. BASIC PROPERTIES DEMO
+            // This shows a simple, looping animation on multiple properties.
+            // ==========================================================================
+            anime({
+                targets: '.basic-demo .el',
+                translateX: 250,      // Move 250px to the right
+                scale: 1.5,           // Scale up to 150%
+                rotate: '1turn',      // Rotate a full 360 degrees
+                backgroundColor: '#FFF', // Animate the background color
+                duration: 2000,
+                loop: true,           // Loop the animation forever
+                direction: 'alternate', // Go forward, then reverse, then forward...
+                easing: 'easeInOutSine', // A smooth sine wave easing
+                delay: anime.stagger(200) // Also apply a stagger here
+            });
+
+
+            // ==========================================================================
+            // 3. STAGGERING GRID DEMO
+            // The most powerful feature of Anime.js for UI/motion graphics.
+            // ==========================================================================
+            
+            const staggerGrid = document.querySelector('.stagger-grid');
+            // Let's create the grid elements with JavaScript.
+            for (let i = 0; i < 15 * 15; i++) {
+                staggerGrid.appendChild(document.createElement('div')).classList.add('el');
+            }
+
+            // Create the staggering animation.
+            anime({
+                targets: '.stagger-grid .el',
+                scale: [
+                    { value: .1, easing: 'easeOutSine', duration: 500 },
+                    { value: 1, easing: 'easeInOutQuad', duration: 1200 }
+                ],
+                loop: true,
+                direction: 'alternate',
+                // This is where the magic happens. We create a complex delay.
+                delay: anime.stagger(200, { 
+                    grid: [15, 15],      // Define the grid dimensions
+                    from: 'center'       // Start the animation from the center outwards
+                })
+            });
+
+            
+            // ==========================================================================
+            // 4. TIMELINE DEMO
+            // For creating complex, sequential animations.
+            // ==========================================================================
+
+            // First, create a timeline instance. We can make it loop.
+            const timeline = anime.timeline({
+                easing: 'easeOutExpo',
+                loop: true,
+                direction: 'alternate'
+            });
+
+            // Use the .add() method to chain animations. Each one starts after
+            // the previous one completes.
+            timeline
+                .add({
+                    targets: '.timeline-demo .el',
+                    translateX: 250, // Move right
+                    duration: 1000
+                })
+                .add({
+                    targets: '.timeline-demo .el',
+                    translateY: 50,  // Move down
+                    rotate: 180,     // Rotate
+                    duration: 500
+                })
+                .add({
+                    targets: '.timeline-demo .el',
+                    translateX: 0,   // Move back to the start
+                    duration: 1000
+                })
+                .add({
+                    targets: '.timeline-demo .el',
+                    translateY: 0,
+                    rotate: 0,
+                    duration: 500
+                });
+
+
+            // ==========================================================================
+            // 5. SVG LINE DRAWING DEMO
+            // A classic motion graphics effect.
+            // ==========================================================================
+            const svgPath = document.querySelector('#svg-demo-path');
+            // This is a crucial step: get the total length of the SVG path.
+            const pathLength = svgPath.getTotalLength();
+
+            // Use the length to set the 'strokeDasharray' and 'strokeDashoffset'.
+            // This effectively makes the line "dashed" with one long dash and one long gap,
+            // and then hides the dash by offsetting it.
+            svgPath.style.strokeDasharray = pathLength;
+            svgPath.style.strokeDashoffset = pathLength;
+
+            anime({
+                targets: '#svg-demo-path',
+                strokeDashoffset: [anime.setDashoffset, 0], // Animate from its current offset to 0
+                easing: 'easeInOutSine',
+                duration: 2500,
+                loop: true,
+                direction: 'alternate'
+            });
+
+
+            // ==========================================================================
+            // 6. PLAYBACK CONTROLS DEMO
+            // Shows how to control an animation instance programmatically.
+            // ==========================================================================
+
+            // Create the animation but DON'T start it immediately (autoplay: false).
+            const playbackAnimation = anime({
+                targets: '.playback-demo .el',
+                translateX: 400,
+                easing: 'easeInOutExpo',
+                duration: 2000,
+                loop: true,
+                direction: 'alternate',
+                autoplay: false // Crucial for manual control
+            });
+
+            // Add event listeners to our buttons to call the control methods.
+            document.querySelector('#controls .play').onclick = playbackAnimation.play;
+            document.querySelector('#controls .pause').onclick = playbackAnimation.pause;
+            document.querySelector('#controls .restart').onclick = playbackAnimation.restart;
+
+        });
+    </script>
+</body>
+</html>
