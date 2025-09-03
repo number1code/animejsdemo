@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime.js Matrix Ripple Effect</title>
+
+    <style>
+        /* ==========================================================================
+           1. CSS STYLING & THEME
+           - We establish the "Matrix" vibe here with a dark background, green text,
+             and a monospace font.
+           ========================================================================== */
+        :root {
+            --matrix-bg: #0d0d0d;
+            --matrix-green-dim: #003b00;
+            --matrix-green-bright: #00ff41;
+            --font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: var(--matrix-bg);
+            color: var(--matrix-green-bright);
+            font-family: var(--font-family);
+            margin: 0;
+            /* Hide scrollbars for a full-screen app feel */
+            overflow: hidden; 
+        }
+
+        /* ==========================================================================
+           2. GRID & CONTENT LAYOUT
+           - This is the core of the visual setup. The grid container sits in the
+             background, and the main content sits on top.
+           ========================================================================== */
+        
+        #matrix-grid {
+            /* This container will hold our background animation grid */
+            position: fixed; /* Fixes it to the viewport */
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            /* CRUCIAL: z-index: -1 places this div BEHIND all other content */
+            z-index: -1; 
+            display: grid;
+            /* The grid dimensions will be set by JavaScript */
+        }
+
+        .grid-cell {
+            /* These are the individual dots of our grid */
+            background-color: var(--matrix-green-dim);
+            opacity: 0; /* Start invisible, will be faded in by animation */
+            transition: background-color 0.2s ease; /* A subtle transition for the default state */
+            
+            /* PERFORMANCE TIP: 'will-change' tells the browser to optimize rendering
+               for these properties because we plan to animate them heavily. */
+            will-change: transform, opacity;
+        }
+
+        .content {
+            /* This container holds our main content (like the button) */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        /* ==========================================================================
+           3. BUTTON STYLING
+           - The key here is 'position: relative' and 'overflow: hidden'. This turns
+             the button into a "viewport" for its own internal animation.
+           ========================================================================== */
+        .matrix-button {
+            /* --- Core Styling --- */
+            background-color: transparent;
+            border: 2px solid var(--matrix-green-bright);
+            color: var(--matrix-green-bright);
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            font-family: var(--font-family);
+            cursor: pointer;
+            transition: color 0.3s ease, background-color 0.3s ease;
+            
+            /* --- CRUCIAL FOR THE EFFECT --- */
+            position: relative; /* Establishes a coordinate system for child elements */
+            overflow: hidden;   /* Hides any part of a child element that goes outside the button's bounds */
+            z-index: 1; /* Ensures it sits above the background grid */
+        }
+
+        .matrix-button:hover {
+            color: var(--matrix-bg);
+            background-color: var(--matrix-green-bright);
+        }
+
+        .button-grid {
+            /* This grid is INSIDE the button */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            z-index: -1; /* Place it behind the button's text content */
+        }
+
+        .button-grid .grid-cell {
+            background-color: var(--matrix-green-bright);
+            opacity: 0;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- The container for our full-screen background effect -->
+    <div id="matrix-grid"></div>
+
+    <!-- The main content area -->
+    <main class="content">
+        <button class="matrix-button">
+            HOVER ME
+            <!-- This button will get its own internal grid for its hover effect -->
+        </button>
+    </main>
+
+    <!-- Include the Anime.js library from a CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ==========================================================================
+            // 1. SETUP & GRID CREATION
+            // - We define our grid dimensions and create a reusable function to generate
+            //   the grid cells dynamically. This is a "Don't Repeat Yourself" (DRY) practice.
+            // ==========================================================================
+            const backgroundGrid = document.getElementById('matrix-grid');
+            const button = document.querySelector('.matrix-button');
+            
+            const GRID_COLS = 50;
+            const GRID_ROWS = 30;
+
+            // This helper function creates a grid of divs and is highly reusable.
+            function createGrid(container, rows, cols, cellClass) {
+                container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+                container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+                const cells = [];
+                for (let i = 0; i < rows * cols; i++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add(cellClass);
+                    container.appendChild(cell);
+                    cells.push(cell);
+                }
+                return cells;
+            }
+
+            const backgroundCells = createGrid(backgroundGrid, GRID_ROWS, GRID_COLS, 'grid-cell');
+            
+            // ==========================================================================
+            // 2. BACKGROUND EDGE RIPPLE EFFECT
+            // - This is the core logic for the full-screen effect.
+            // - It uses a "throttling" flag to ensure high performance.
+            // ==========================================================================
+
+            let isAnimating = false; // Our throttling flag
+            const edgeThreshold = 100; // How close to an edge (in pixels) the mouse needs to be
+
+            window.addEventListener('mousemove', (e) => {
+                // PERFORMANCE 101: Throttling the event.
+                // If an animation is already running, we immediately exit. This prevents
+                // firing thousands of animations and crashing the browser.
+                if (isAnimating) return;
+
+                const { clientX, clientY } = e;
+                const { innerWidth, innerHeight } = window;
+
+                // Check if the mouse is near any of the four edges
+                const isNearEdge = 
+                    clientX < edgeThreshold ||
+                    clientX > innerWidth - edgeThreshold ||
+                    clientY < edgeThreshold ||
+                    clientY > innerHeight - edgeThreshold;
+
+                if (isNearEdge) {
+                    isAnimating = true; // Set the flag to true to block new animations
+
+                    // Find the grid cell index closest to the mouse pointer.
+                    // This is how we make the ripple start from the cursor.
+                    const col = Math.floor((clientX / innerWidth) * GRID_COLS);
+                    const row = Math.floor((clientY / innerHeight) * GRID_ROWS);
+                    const index = row * GRID_COLS + col;
+                    
+                    // The Anime.js magic!
+                    anime({
+                        targets: backgroundCells,
+                        opacity: [
+                            { value: 1, duration: 200 }, // Fade in quickly
+                            { value: 0, duration: 800 }  // Fade out slowly
+                        ],
+                        scale: [
+                            { value: 1.5, duration: 200 },
+                            { value: 1, duration: 800 }
+                        ],
+                        easing: 'easeOutQuad',
+                        // STAGGERING: This is the ripple effect. It applies a delay to each
+                        // element based on its distance from our starting 'index'.
+                        delay: anime.stagger(100, {
+                            grid: [GRID_COLS, GRID_ROWS],
+                            from: index // Start the ripple from the cell nearest the mouse
+                        }),
+                        // The 'complete' callback is crucial for our throttling.
+                        // When the animation finishes, we reset the flag to allow a new one.
+                        complete: () => {
+                            isAnimating = false;
+                        }
+                    });
+                }
+            });
+
+            // ==========================================================================
+            // 3. BUTTON HOVER RIPPLE EFFECT
+            // - We apply the same principles but on a smaller scale, contained
+            //   within the button itself.
+            // ==========================================================================
+            
+            const buttonGridContainer = document.createElement('div');
+            buttonGridContainer.className = 'button-grid';
+            button.appendChild(buttonGridContainer);
+            
+            const BUTTON_GRID_COLS = 10;
+            const BUTTON_GRID_ROWS = 5;
+            const buttonCells = createGrid(buttonGridContainer, BUTTON_GRID_ROWS, BUTTON_GRID_COLS, 'grid-cell');
+            
+            button.addEventListener('mouseenter', () => {
+                // Animate the button's internal grid.
+                anime({
+                    targets: buttonCells,
+                    opacity: [
+                        { value: 0.7, duration: 150 },
+                        { value: 0, duration: 500 }
+                    ],
+                    scale: [
+                        { value: 1.5, duration: 150 },
+                        { value: 1, duration: 500 }
+                    ],
+                    easing: 'easeOutQuad',
+                    delay: anime.stagger(50, {
+                        grid: [BUTTON_GRID_COLS, BUTTON_GRID_ROWS],
+                        from: 'center' // A ripple from the center is perfect for a button hover
+                    })
+                });
+            });
+        });
+    </script>
+</body>
+</html>
