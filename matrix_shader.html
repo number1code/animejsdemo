@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matrix GLSL Shader Background</title>
+    <style>
+        /* This CSS is a simplified version from our last session,
+           just enough to style the button and make the canvas full-screen. */
+        :root {
+            --matrix-bg: #000000;
+            --matrix-green-bright: #00ff41;
+        }
+        body {
+            background-color: var(--matrix-bg);
+            margin: 0;
+            overflow: hidden;
+        }
+        #shader-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        .content {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .matrix-button {
+            background-color: transparent;
+            border: 2px solid var(--matrix-green-bright);
+            color: var(--matrix-green-bright);
+            padding: 20px 40px;
+            font-size: 1.5rem;
+            font-family: 'Courier New', Courier, monospace;
+            cursor: pointer;
+            transition: color 0.3s ease, background-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        .matrix-button:hover {
+            color: var(--matrix-bg);
+            background-color: var(--matrix-green-bright);
+        }
+    </style>
+</head>
+<body>
+    <!-- The canvas where our Three.js scene and shader will be rendered -->
+    <canvas id="shader-canvas"></canvas>
+
+    <!-- The button and other content will sit on top of the canvas -->
+    <main class="content">
+        <button class="matrix-button">
+            ENTER THE MATRIX
+        </button>
+    </main>
+
+    <!-- Include Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- ====================================================================== -->
+    <!-- NEW: MATRIX DIGITAL RAIN FRAGMENT SHADER                             -->
+    <!-- ====================================================================== -->
+    <script id="fragmentShader" type="x-shader/x-fragment">
+        // Uniforms passed from our JavaScript
+        uniform float u_time;
+        uniform vec2 u_resolution;
+
+        // --- Helper Functions ---
+
+        // A simple pseudo-random number generator
+        float random(vec2 st) {
+            return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+        }
+
+        // --- Main Shader Logic ---
+        void main() {
+            // Divide the screen into a grid of character cells.
+            // We can adjust 'cellSize' to make characters bigger or smaller.
+            float cellSize = 15.0; 
+            vec2 st = gl_FragCoord.xy / cellSize;
+
+            // --- 1. Create Rain Columns ---
+            // Get the integer coordinate for the current column.
+            float column_x = floor(st.x);
+
+            // Each column gets its own random speed and offset.
+            // This makes the rain appear sporadic and unsynchronized.
+            float column_speed = random(vec2(column_x, 0.0)) * 0.5 + 0.1;
+            float column_offset = random(vec2(column_x, 1.0)) * 100.0; // Random start position
+
+            // Calculate the main downward movement of the rain for this column.
+            // We use 'fract' to make the rain wrap around from top to bottom.
+            float rain_y = fract((st.y - u_time * column_speed) + column_offset);
+            
+            // --- 2. Create the "Characters" ---
+            // For each cell in the grid, generate a random, static character value.
+            // This simulates the grid of Katakana characters.
+            vec2 char_grid_pos = floor(st);
+            float character = random(char_grid_pos); // A random value from 0.0 to 1.0
+
+            // --- 3. Create the Fading Tail Effect ---
+            // Calculate the distance of the current pixel from the "head" of the raindrop.
+            // The head is at rain_y.
+            float distance_from_head = fract(st.y - rain_y);
+
+            // Use 'step' and 'pow' to create the bright head and fading tail.
+            // The head of the drop is very bright, and the tail fades out quickly.
+            float brightness = pow(1.0 - distance_from_head, 20.0);
+            
+            // Add a subtle flicker to the head of the drop to make it feel more alive.
+            if (distance_from_head < 0.05) {
+                brightness += random(vec2(u_time, column_x)) * 0.5;
+            }
+
+            // --- 4. Combine and Color ---
+            // We multiply our static character value by the moving brightness mask.
+            // This makes it look like the characters are lighting up and fading out.
+            float final_char = character * brightness;
+
+            // Create the final Matrix green color.
+            vec3 color = vec3(0.0, 1.0, 0.2) * final_char;
+            
+            // Add a very subtle glow to the brightest parts.
+            if (brightness > 0.9) {
+                color += vec3(0.8, 1.0, 0.8) * brightness;
+            }
+
+            // The final output color for this pixel.
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ==========================================================================
+            // THREE.JS SETUP (Identical to the 'Stellar' project)
+            // ==========================================================================
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            // We don't need to see anything at the center, so we can keep the camera at 0.
+            camera.position.z = 1; 
+
+            const renderer = new THREE.WebGLRenderer({
+                canvas: document.querySelector('#shader-canvas'),
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // This is our clock to keep track of time for the animation.
+            const clock = new THREE.Clock();
+
+            // These are the "uniforms" we will pass to our shader. They are the bridge
+            // between our JavaScript and the GLSL code running on the GPU.
+            const shaderUniforms = {
+                u_time: { value: 0.0 },
+                u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }
+            };
+
+            // Create a simple plane geometry that fills the entire screen.
+            const backgroundGeometry = new THREE.PlaneGeometry(2, 2); // A simple quad is enough
+
+            // Create the special ShaderMaterial.
+            const backgroundMaterial = new THREE.ShaderMaterial({
+                uniforms: shaderUniforms,
+                // We get the shader code from our <script> tag using its ID.
+                fragmentShader: document.getElementById('fragmentShader').textContent
+            });
+
+            // Create the final mesh for our background and add it to the scene.
+            const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+            scene.add(backgroundMesh);
+
+            // ==========================================================================
+            // ANIMATION LOOP
+            // ==========================================================================
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Update the 'u_time' uniform for our background shader on every frame.
+                shaderUniforms.u_time.value = clock.getElapsedTime();
+
+                // Render the scene. Since the camera is looking at a single plane that
+                // fills the screen, the shader will cover everything.
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // ==========================================================================
+            // RESPONSIVENESS
+            // ==========================================================================
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                // Update the shader's resolution uniform when the window is resized.
+                shaderUniforms.u_resolution.value.set(window.innerWidth, window.innerHeight);
+            });
+        });
+    </script>
+</body>
+</html>
