@@ -31,4 +31,4 @@ This showcase provides live, interactive examples of the following `anime.js` co
 
 ### 🚀 How to Run
 
-No special setup is required. Simply open the `anime_showcase.html` file in any modern web browser.
+No special setup is required. Simply open the `ripple_matrix.html` file in any modern web browser.
